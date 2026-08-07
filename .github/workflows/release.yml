@@ -1,0 +1,95 @@
+name: Build installers
+
+# Builds the three end-user installers (Windows .exe, macOS .dmg, Android .apk)
+# and, when triggered by a version tag, publishes them to a GitHub Release.
+#
+# Run it either by pushing a tag:   git tag v1.0.0 && git push origin v1.0.0
+# or manually from the Actions tab (workflow_dispatch).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Android (.apk)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build APK
+        run: ./gradlew :androidApp:assembleDebug
+      - name: Rename artifact
+        run: |
+          mkdir -p dist
+          cp androidApp/build/outputs/apk/debug/androidApp-debug.apk dist/VkArchiveReader-android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VkArchiveReader-android
+          path: dist/VkArchiveReader-android.apk
+
+  macos:
+    name: macOS (.dmg)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build DMG
+        run: ./gradlew :desktopApp:packageDmg -Pjavacpp.platform=macosx-arm64
+      - name: Collect artifact
+        run: |
+          mkdir -p dist
+          cp desktopApp/build/compose/binaries/main/dmg/*.dmg dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VkArchiveReader-macos
+          path: dist/*.dmg
+
+  windows:
+    name: Windows (.exe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build EXE
+        run: ./gradlew :desktopApp:packageExe -Pjavacpp.platform=windows-x86_64
+      - name: Collect artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp desktopApp/build/compose/binaries/main/exe/*.exe dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VkArchiveReader-windows
+          path: dist/*.exe
+
+  release:
+    name: Publish release
+    needs: [android, macos, windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
