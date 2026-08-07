@@ -32,7 +32,8 @@ compose.desktop {
                 // Stable UUID so future versions upgrade instead of installing twice.
                 upgradeUuid = "5f7b2c1e-6a3d-4e28-9c11-2f0b8a4d7e93"
                 shortcut = true
-                dirChooser = true
+                // NB: no dirChooser — it makes jpackage emit InstallDirNotEmptyDlg,
+                // on which WiX 3.11 light.exe fails with exit code 311.
             }
             macOS {
                 bundleID = "ru.normno.vkarchivereader"
