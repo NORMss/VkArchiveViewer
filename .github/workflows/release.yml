@@ -8,8 +8,9 @@ name: Build installers
 
 on:
   push:
-    tags: ['v*']
-  workflow_dispatch:
+    branches: [main]      # build on every push to main (verify latest commit)
+    tags: ['v*']          # a version tag also publishes a Release
+  workflow_dispatch:      # or run manually from the Actions tab
 
 permissions:
   contents: write
