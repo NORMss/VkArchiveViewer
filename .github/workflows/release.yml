@@ -60,7 +60,10 @@ jobs:
 
   windows:
     name: Windows (.exe)
-    runs-on: windows-latest
+    # windows-2022, not windows-latest (=2025): WiX 3.11, which the Compose
+    # plugin uses for jpackage, needs .NET Framework 3.5 — preinstalled on
+    # 2022 but not on 2025, where jpackage fails with a bare exit code 1.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
