@@ -31,7 +31,7 @@
 
 | Система | Файл | Как установить |
 |--------|------|----------------|
-| 🪟 **Windows** | `VkArchiveReader-*.exe` | Запустите файл и следуйте мастеру установки. Если Windows покажет «SmartScreen», нажмите **«Подробнее» → «Выполнить в любом случае»**. |
+| 🪟 **Windows** | `VkArchiveReader-*.msi` | Запустите файл и следуйте мастеру установки. Если Windows покажет «SmartScreen», нажмите **«Подробнее» → «Выполнить в любом случае»**. |
 | 🍎 **macOS** | `VkArchiveReader-*.dmg` | Откройте образ и перетащите приложение в «Программы». При первом запуске нажмите на иконке **правой кнопкой → «Открыть»** (приложение без подписи Apple). |
 | 🤖 **Android** | `VkArchiveReader-android.apk` | Скопируйте файл на телефон и откройте его. Разрешите «установку из неизвестных источников», если телефон попросит. |
 
@@ -234,14 +234,14 @@ shared/commonMain/.../ru/normno/vkarchivereader
 ## Сборка установщиков
 
 Установщики собираются `jpackage` через плагин Compose Desktop, поэтому **каждый
-формат собирается только на своей ОС** (нельзя собрать `.exe` на macOS).
+формат собирается только на своей ОС** (нельзя собрать `.msi` на macOS).
 
 ```bash
 # macOS  → .dmg   (на macOS)
 ./gradlew :desktopApp:packageDmg
 
-# Windows → .exe  (на Windows)
-./gradlew :desktopApp:packageExe -Pjavacpp.platform=windows-x86_64
+# Windows → .msi  (на Windows)
+./gradlew :desktopApp:packageMsi -Pjavacpp.platform=windows-x86_64
 
 # Linux  → .deb   (на Linux)
 ./gradlew :desktopApp:packageDeb -Pjavacpp.platform=linux-x86_64
@@ -251,7 +251,7 @@ shared/commonMain/.../ru/normno/vkarchivereader
 ```
 
 Готовый вывод:
-- `desktopApp/build/compose/binaries/main/{dmg,exe,deb}/`
+- `desktopApp/build/compose/binaries/main/{dmg,msi,deb}/`
 - `androidApp/build/outputs/apk/debug/androidApp-debug.apk`
 
 ### CI

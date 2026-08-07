@@ -20,8 +20,8 @@ compose.desktop {
         mainClass = "ru.normno.vkarchivereader.MainKt"
 
         nativeDistributions {
-            // Dmg — macOS, Exe — Windows installer, Deb — Linux.
-            targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Deb)
+            // Dmg — macOS, Msi — Windows installer, Deb — Linux.
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "VkArchiveReader"
             packageVersion = "1.0.0"
             description = "Удобный просмотр сообщений и медиа из архива выгрузки ВКонтакте"

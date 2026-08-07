@@ -59,7 +59,7 @@ jobs:
           path: dist/*.dmg
 
   windows:
-    name: Windows (.exe)
+    name: Windows (.msi)
     # windows-2022, not windows-latest (=2025): WiX 3.11, which the Compose
     # plugin uses for jpackage, needs .NET Framework 3.5 — preinstalled on
     # 2022 but not on 2025, where jpackage fails with a bare exit code 1.
@@ -73,16 +73,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       # Note: the Compose plugin downloads its own WiX 3.11 (:downloadWix),
       # so no manual WiX install is needed here.
-      - name: Build EXE
+      - name: Build MSI
         # Run under bash: PowerShell splits "-Pjavacpp.platform=..." at the dot.
         shell: bash
-        run: ./gradlew :desktopApp:packageExe "-Pjavacpp.platform=windows-x86_64" --stacktrace
+        run: ./gradlew :desktopApp:packageMsi "-Pjavacpp.platform=windows-x86_64" --stacktrace
       - name: Show jpackage logs on failure
         if: failure()
         shell: bash
         run: |
           echo "=== jpackage logs ==="
-          for f in desktopApp/build/compose/logs/packageExe/*; do
+          for f in desktopApp/build/compose/logs/packageMsi/*; do
             echo "----------- $f -----------"
             cat "$f" || true
           done
@@ -90,11 +90,11 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          cp desktopApp/build/compose/binaries/main/exe/*.exe dist/
+          cp desktopApp/build/compose/binaries/main/msi/*.msi dist/
       - uses: actions/upload-artifact@v4
         with:
           name: VkArchiveReader-windows
-          path: dist/*.exe
+          path: dist/*.msi
 
   release:
     name: Publish release
