@@ -67,8 +67,18 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Install WiX 3 (jpackage needs it for .exe)
+        shell: bash
+        run: |
+          choco install wixtoolset --no-progress -y
+          # Expose candle.exe/light.exe on PATH (version folder varies).
+          wix_bin=$(dirname "$(find '/c/Program Files (x86)' -name candle.exe 2>/dev/null | head -1)")
+          echo "Using WiX at: $wix_bin"
+          echo "$wix_bin" >> "$GITHUB_PATH"
       - name: Build EXE
-        run: ./gradlew :desktopApp:packageExe -Pjavacpp.platform=windows-x86_64
+        # Run under bash: PowerShell splits "-Pjavacpp.platform=..." at the dot.
+        shell: bash
+        run: ./gradlew :desktopApp:packageExe "-Pjavacpp.platform=windows-x86_64"
       - name: Collect artifact
         shell: bash
         run: |
