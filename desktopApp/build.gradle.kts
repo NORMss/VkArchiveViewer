@@ -24,7 +24,9 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "VkArchiveReader"
             packageVersion = "1.0.0"
-            description = "Удобный просмотр сообщений и медиа из архива выгрузки ВКонтакте"
+            // ASCII only: the WiX MSI SummaryInformation uses code page 1252,
+            // so non-Latin-1 text (e.g. Cyrillic) makes light.exe fail (LGHT0311).
+            description = "VK Archive Reader - view messages and media from a VK data export"
             vendor = "normno"
 
             windows {
