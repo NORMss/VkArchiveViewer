@@ -1,0 +1,75 @@
+name: Deploy web to GitHub Pages
+
+# Builds the Compose Multiplatform web app (WebAssembly with a JavaScript
+# fallback for older browsers) and publishes it to GitHub Pages.
+#
+# Runs on every push to main, or manually from the Actions tab.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permissions required by the GitHub Pages deployment action.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment at a time; a newer push cancels an in-flight run.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  # ┌──────────────────────────────────────────────────────────────────────┐
+  # │  ВСТАВЬ СВОЙ ДОМЕН ЗДЕСЬ, например:  CUSTOM_DOMAIN: "vk.example.com"    │
+  # │  Оставь пустым ("") — сайт будет на https://<user>.github.io/<repo>/   │
+  # └──────────────────────────────────────────────────────────────────────┘
+  CUSTOM_DOMAIN: ""
+
+jobs:
+  build:
+    name: Build web bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # composeCompatibilityBrowserDistribution = wasm build + js fallback,
+      # combined into one directory that auto-selects the right one per browser.
+      - name: Build web (wasm + js fallback)
+        run: ./gradlew :webApp:composeCompatibilityBrowserDistribution
+
+      # Tell GitHub Pages not to run Jekyll over the output.
+      - name: Disable Jekyll
+        run: touch webApp/build/dist/composeWebCompatibility/productionExecutable/.nojekyll
+
+      # A CNAME file in the published artifact configures the custom domain.
+      # Skipped automatically when CUSTOM_DOMAIN is left empty.
+      - name: Set custom domain
+        if: env.CUSTOM_DOMAIN != ''
+        run: echo "${CUSTOM_DOMAIN}" > webApp/build/dist/composeWebCompatibility/productionExecutable/CNAME
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: webApp/build/dist/composeWebCompatibility/productionExecutable
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

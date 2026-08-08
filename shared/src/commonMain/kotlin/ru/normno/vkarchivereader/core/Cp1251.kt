@@ -39,7 +39,7 @@ object Cp1251 {
     // Reverse of [high] for the 0x80..0xBF range (char -> byte), built once.
     // The replacement char is skipped; the first mapping for a char wins.
     private val highReverse: Map<Char, Int> = buildMap {
-        high.forEachIndexed { i, c -> if (c != '�') putIfAbsent(c, 0x80 + i) }
+        high.forEachIndexed { i, c -> if (c != '�' && c !in this) put(c, 0x80 + i) }
     }
 
     /**
