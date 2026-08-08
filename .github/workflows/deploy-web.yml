@@ -57,11 +57,11 @@ jobs:
         if: env.CUSTOM_DOMAIN != ''
         run: echo "${CUSTOM_DOMAIN}" > webApp/build/dist/composeWebCompatibility/productionExecutable/CNAME
 
-      # enablement: turns on GitHub Pages for the repo automatically on the
-      # first run, so no manual Settings -> Pages step is needed.
+      # NOTE: Pages must be enabled once manually in
+      # Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+      # Auto-enablement is not used because the default GITHUB_TOKEN lacks the
+      # admin rights to create a Pages site ("Resource not accessible").
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
