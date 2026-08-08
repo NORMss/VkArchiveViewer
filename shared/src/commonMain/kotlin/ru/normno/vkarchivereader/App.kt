@@ -115,14 +115,14 @@ private fun AppContent() {
     fun navigate(target: Screen) { backStack.add(target) }
     fun popBack() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
 
-    // System back / predictive-back: close the viewer, else pop the stack, else
-    // (at the root chat list) close the archive back to the welcome screen.
-    BackHandler(enabled = loaded) {
-        when {
-            fullscreenImage != null -> fullscreenImage = null
-            backStack.size > 1 -> popBack()
-            else -> viewModel.reset()
-        }
+    // System back / predictive-back: close the viewer, else pop the stack. At the
+    // root chat list we deliberately do NOT intercept, so back doesn't kick the
+    // user out to the welcome/archive-picker screen (it just closes the app on
+    // Android and is a no-op on desktop). Closing the archive is done explicitly
+    // via the toolbar's close action instead.
+    BackHandler(enabled = loaded && (fullscreenImage != null || backStack.size > 1)) {
+        if (fullscreenImage != null) fullscreenImage = null
+        else popBack()
     }
 
     // Edge-to-edge: keep the app's content out from under the side/bottom system

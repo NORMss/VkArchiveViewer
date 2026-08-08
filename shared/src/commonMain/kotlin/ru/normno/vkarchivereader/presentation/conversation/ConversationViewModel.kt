@@ -61,14 +61,14 @@ data class AuthorBrowseState(
     val processed: Int = 0,
     val total: Int = 0,
     val messages: List<Message> = emptyList(),
+    /** Full per-author message tally across the whole chat (not just loaded pages). */
+    val authorTotals: Map<String, Int> = emptyMap(),
     val authorFilter: String? = null,
     val truncated: Boolean = false,
 ) {
     /** Participants of the chat with how many messages each wrote, by count desc. */
     val authorCounts: List<AuthorHitCount>
-        get() = messages
-            .groupingBy { it.displayAuthor }
-            .eachCount()
+        get() = authorTotals
             .map { (name, count) -> AuthorHitCount(name, count) }
             .sortedByDescending { it.count }
 
@@ -236,6 +236,7 @@ class ConversationViewModel(
             _browse.value = _browse.value.copy(
                 loading = false,
                 messages = loaded.messages,
+                authorTotals = loaded.authorCounts,
                 truncated = loaded.truncated,
             )
         }

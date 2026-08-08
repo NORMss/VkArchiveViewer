@@ -22,6 +22,11 @@ compose.desktop {
         nativeDistributions {
             // Dmg — macOS, Msi — Windows installer, Deb — Linux.
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            // sqlite-jdbc (face grouping) uses java.sql.DriverManager. jpackage
+            // ships a minimal jlink runtime, so java.sql must be requested
+            // explicitly or the packaged app throws NoClassDefFoundError:
+            // java/sql/DriverManager when opening "Лица".
+            modules("java.sql")
             packageName = "VkArchiveReader"
             packageVersion = "1.0.0"
             // ASCII only: the WiX MSI SummaryInformation uses code page 1252,

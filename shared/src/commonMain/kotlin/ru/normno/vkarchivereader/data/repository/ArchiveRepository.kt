@@ -29,10 +29,16 @@ data class SearchHit(
     val message: Message,
 )
 
-/** Result of loading every message of a chat; [truncated] is true if the cap was hit. */
+/**
+ * Result of loading every message of a chat; [truncated] is true if the message
+ * cap was hit. [authorCounts] (display author → message count) is collected over
+ * *all* pages regardless of the cap, so the participant list stays complete even
+ * for chats too big to hold in memory.
+ */
 data class LoadedMessages(
     val messages: List<Message>,
     val truncated: Boolean,
+    val authorCounts: Map<String, Int> = emptyMap(),
 )
 
 /**
@@ -186,7 +192,9 @@ class ArchiveRepository {
     /**
      * Read every message of a chat across all its pages, so callers can browse
      * or filter the whole conversation (e.g. by author). Cooperative: yields
-     * regularly and honours cancellation. Stops after [limit] messages.
+     * regularly and honours cancellation. Keeps at most [limit] messages in
+     * memory (marking the result truncated past that), but always scans every
+     * page to tally per-author message counts so the participant list is complete.
      * [onProgress] is `(processedPages, totalPages)`.
      */
     suspend fun readAllMessages(
@@ -196,14 +204,18 @@ class ArchiveRepository {
         onProgress: (Int, Int) -> Unit = { _, _ -> },
     ): LoadedMessages {
         val all = ArrayList<Message>()
+        val authorCounts = LinkedHashMap<String, Int>()
+        var truncated = false
         for (page in 0 until pageCount) {
             currentCoroutineContext().ensureActive()
-            all.addAll(readPage(dirPath, page))
+            for (m in readPage(dirPath, page)) {
+                authorCounts[m.displayAuthor] = (authorCounts[m.displayAuthor] ?: 0) + 1
+                if (all.size < limit) all.add(m) else truncated = true
+            }
             onProgress(page + 1, pageCount)
-            if (all.size >= limit) return LoadedMessages(all, truncated = true)
             if (page % YIELD_EVERY_PAGES == 0) yield()
         }
-        return LoadedMessages(all, truncated = false)
+        return LoadedMessages(all, truncated, authorCounts)
     }
 
     /**

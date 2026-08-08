@@ -6,7 +6,10 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.get
 import java.io.File
 
-private val engine: FaceEngine? by lazy { buildEngine() }
+// Any failure while wiring up the native/SQLite face engine (e.g. a missing
+// java.sql module in a broken build, or unavailable OpenCV natives) degrades to
+// "face grouping unsupported" instead of crashing the whole app.
+private val engine: FaceEngine? by lazy { runCatching { buildEngine() }.getOrNull() }
 
 actual fun createFaceEngine(): FaceEngine? = engine
 
