@@ -25,13 +25,19 @@ sealed interface FaceProcessingState {
     data class Failed(val message: String) : FaceProcessingState
 }
 
-class FaceViewModel : ViewModel() {
+class FaceViewModel(private val archiveId: String) : ViewModel() {
 
     private val engine = createFaceEngine()
     val supported: Boolean get() = engine != null
 
     val groups: Flow<List<FaceGroup>> =
         engine?.store?.observeGroups() ?: flowOf(emptyList())
+
+    init {
+        // Scope the store to this archive so groups from a previously opened
+        // archive aren't shown for the current one.
+        engine?.let { e -> viewModelScope.launch { e.store.setArchive(archiveId) } }
+    }
 
     private val _processing = MutableStateFlow<FaceProcessingState>(FaceProcessingState.Idle)
     val processing: StateFlow<FaceProcessingState> = _processing.asStateFlow()

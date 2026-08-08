@@ -29,30 +29,39 @@ private class AndroidMediaDownloader(private val context: Context) : MediaDownlo
             try {
                 val bytes = client.get(url).body<ByteArray>()
                 if (bytes.isEmpty()) return@withContext DownloadResult.FAILED
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) saveViaMediaStore(bytes, fileName)
-                else saveLegacy(bytes, fileName)
+                val mime = mimeTypeForName(fileName)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) saveViaMediaStore(bytes, fileName, mime)
+                else saveLegacy(bytes, fileName, mime)
             } catch (e: Throwable) {
                 DownloadResult.FAILED
             }
         }
 
-    private fun saveViaMediaStore(bytes: ByteArray, fileName: String): DownloadResult {
+    // Images land in Pictures/gallery; everything else (video, audio, docs) in Downloads.
+    private fun saveViaMediaStore(bytes: ByteArray, fileName: String, mime: String): DownloadResult {
+        val isImage = isImageMime(mime)
+        val collection =
+            if (isImage) MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            else MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        val relativePath =
+            if (isImage) "${Environment.DIRECTORY_PICTURES}/VkArchiveReader"
+            else "${Environment.DIRECTORY_DOWNLOADS}/VkArchiveReader"
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/VkArchiveReader")
+            put(MediaStore.MediaColumns.MIME_TYPE, mime)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
         }
         val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            ?: return DownloadResult.FAILED
+        val uri = resolver.insert(collection, values) ?: return DownloadResult.FAILED
         resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: return DownloadResult.FAILED
         return DownloadResult.SAVED
     }
 
-    private fun saveLegacy(bytes: ByteArray, fileName: String): DownloadResult {
+    private fun saveLegacy(bytes: ByteArray, fileName: String, mime: String): DownloadResult {
+        val target = if (isImageMime(mime)) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_DOWNLOADS
         @Suppress("DEPRECATION")
         val dir = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+            Environment.getExternalStoragePublicDirectory(target),
             "VkArchiveReader",
         ).apply { mkdirs() }
         File(dir, fileName).writeBytes(bytes)

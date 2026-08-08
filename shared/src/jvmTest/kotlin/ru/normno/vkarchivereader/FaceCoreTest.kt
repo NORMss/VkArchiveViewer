@@ -39,6 +39,7 @@ class FaceCoreTest {
         val dbFile = File.createTempFile("faces-test", ".db").apply { deleteOnExit() }
         val store = SqliteFaceStore(dbFile)
 
+        store.setArchive("archive-1")
         store.save(
             groups = listOf(StoredGroup(0, "Группа 1"), StoredGroup(1, "Группа 2")),
             faces = listOf(
@@ -59,6 +60,12 @@ class FaceCoreTest {
 
         store.renameGroup(0, "Иван Иванов")
         assertEquals("Иван Иванов", store.observeGroups().value.first { it.id == 0L }.name)
+
+        // Opening a different archive must not surface the first archive's groups.
+        store.setArchive("archive-2")
+        assertTrue(store.observeGroups().value.isEmpty())
+        store.setArchive("archive-1")
+        assertEquals(2, store.observeGroups().value.size)
 
         store.clear()
         assertTrue(store.observeGroups().value.isEmpty())

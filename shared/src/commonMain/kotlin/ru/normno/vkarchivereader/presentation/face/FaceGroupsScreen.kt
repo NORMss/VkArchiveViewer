@@ -55,9 +55,10 @@ import ru.normno.vkarchivereader.presentation.components.NetworkImage
 @Composable
 fun FaceGroupsScreen(
     images: List<MediaItem>,
+    archiveId: String,
     onBack: () -> Unit,
 ) {
-    val viewModel: FaceViewModel = viewModel { FaceViewModel() }
+    val viewModel: FaceViewModel = viewModel(key = "faces-$archiveId") { FaceViewModel(archiveId) }
     val downloader = rememberMediaDownloader()
     val scope = rememberCoroutineScope()
 

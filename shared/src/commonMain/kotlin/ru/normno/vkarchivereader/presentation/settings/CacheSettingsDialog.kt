@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -19,15 +20,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ru.normno.vkarchivereader.core.BYTES_IN_GB
 import ru.normno.vkarchivereader.core.ImageCacheStore
+import ru.normno.vkarchivereader.platform.rememberUrlOpener
 import kotlin.math.roundToInt
 
 private const val MIN_GB = 1f
 private const val MAX_GB = 20f
+private const val DEVELOPER_URL = "https://normno.ru"
 
 /** Dialog to configure the on-device image cache size limit (default 3 GB). */
 @Composable
 fun CacheSettingsDialog(onDismiss: () -> Unit) {
     val diskSupported = remember { ImageCacheStore.diskCacheDir() != null }
+    val urlOpener = rememberUrlOpener()
     var gb by remember {
         mutableStateOf((ImageCacheStore.maxBytes().toFloat() / BYTES_IN_GB).coerceIn(MIN_GB, MAX_GB))
     }
@@ -72,6 +76,17 @@ fun CacheSettingsDialog(onDismiss: () -> Unit) {
                         "В веб-версии кешированием изображений управляет сам браузер, " +
                             "поэтому ограничение размера здесь не применяется.",
                         style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                HorizontalDivider()
+                TextButton(
+                    onClick = { urlOpener.open(DEVELOPER_URL) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        "Разработчик: normno.ru",
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
             }

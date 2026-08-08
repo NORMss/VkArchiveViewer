@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +33,11 @@ import ru.normno.vkarchivereader.data.source.ArchivePickOutcome
 import ru.normno.vkarchivereader.data.source.DemoArchiveSource
 import ru.normno.vkarchivereader.data.source.archiveDropTarget
 import ru.normno.vkarchivereader.data.source.rememberArchiveChooser
+import ru.normno.vkarchivereader.platform.rememberUrlOpener
 import ru.normno.vkarchivereader.presentation.archive.ArchiveUiState
+
+private const val VK_FAQ_URL = "https://vk.ru/faq18145"
+private const val DEVELOPER_URL = "https://normno.ru"
 
 @Composable
 fun WelcomeScreen(
@@ -42,6 +47,7 @@ fun WelcomeScreen(
 ) {
     val launchChooser = rememberArchiveChooser(onResult)
     val loading = state is ArchiveUiState.Loading
+    val urlOpener = rememberUrlOpener()
 
     Box(
         modifier = modifier
@@ -51,6 +57,17 @@ fun WelcomeScreen(
             .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
+        IconButton(
+            onClick = { urlOpener.open(VK_FAQ_URL) },
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) {
+            Icon(
+                AppIcons.Info,
+                contentDescription = "Как скачать архив ВКонтакте",
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -140,6 +157,14 @@ fun WelcomeScreen(
                 )
 
                 else -> Unit
+            }
+
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = { urlOpener.open(DEVELOPER_URL) }) {
+                Text(
+                    "Разработчик: normno.ru",
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
         }
     }

@@ -5,9 +5,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.focusable
@@ -92,7 +97,9 @@ fun FullscreenMediaViewer(
 
         // Top bar
         Row(
-            Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(8.dp),
+            Modifier.fillMaxWidth().align(Alignment.TopCenter)
+                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
+                .padding(8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -118,7 +125,9 @@ fun FullscreenMediaViewer(
         // Bottom caption
         val current = items[pagerState.currentPage]
         Column(
-            Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(12.dp),
+            Modifier.fillMaxWidth().align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(

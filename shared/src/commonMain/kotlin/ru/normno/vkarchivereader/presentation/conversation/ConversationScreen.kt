@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -53,12 +54,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import org.koin.compose.getKoin
 import ru.normno.vkarchivereader.data.repository.ArchiveRepository
+import ru.normno.vkarchivereader.domain.model.Attachment
+import ru.normno.vkarchivereader.domain.model.AttachmentType
 import ru.normno.vkarchivereader.domain.model.ChatKind
 import ru.normno.vkarchivereader.domain.model.ChatSummary
 import ru.normno.vkarchivereader.domain.model.Message
+import ru.normno.vkarchivereader.download.DownloadResult
+import ru.normno.vkarchivereader.download.fileNameFor
+import ru.normno.vkarchivereader.download.rememberMediaDownloader
+import ru.normno.vkarchivereader.platform.rememberUrlOpener
 import ru.normno.vkarchivereader.presentation.archive.AuthorHitCount
 import ru.normno.vkarchivereader.presentation.components.AppIcons
 import ru.normno.vkarchivereader.presentation.components.NetworkImage
@@ -90,6 +99,27 @@ fun ConversationScreen(
     // "Browse by author" only makes sense in groups/conversations (many authors).
     val canBrowseByAuthor = chat.kind != ChatKind.USER
 
+    // Open non-photo attachments in the device's native apps and let the user
+    // download any attachment straight from the conversation.
+    val opener = rememberUrlOpener()
+    val downloader = rememberMediaDownloader()
+    val scope = rememberCoroutineScope()
+    var toast by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(toast) { if (toast != null) { delay(2500); toast = null } }
+
+    val openAttachment: (Attachment) -> Unit = { att -> opener.open(att.url) }
+    val downloadAttachment: (Attachment) -> Unit = { att ->
+        scope.launch {
+            toast = "Скачивание…"
+            toast = when (downloader.download(att.url, fileNameFor(att.url, 0, "vk"))) {
+                DownloadResult.SAVED -> "Сохранено в загрузки"
+                DownloadResult.UNSUPPORTED -> { opener.open(att.url); "Открываю во внешнем приложении" }
+                DownloadResult.FAILED -> "Не удалось скачать"
+            }
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
             title = {
@@ -147,21 +177,43 @@ fun ConversationScreen(
 
         when {
             browse.active ->
-                AuthorBrowseContent(browse, viewModel::setBrowseAuthor, onOpenImage)
+                AuthorBrowseContent(
+                    browse, viewModel::setBrowseAuthor, onOpenImage,
+                    openAttachment, downloadAttachment,
+                )
 
             search.active && search.executed ->
                 InChatSearchResults(
                     search, viewModel::setAuthorFilter, viewModel::jumpFromSearch, onOpenImage,
+                    openAttachment, downloadAttachment,
                 )
 
             else -> MessageList(
                 state = messagesState,
                 onLoadMore = viewModel::loadNextPage,
                 onOpenImage = onOpenImage,
+                onOpenAttachment = openAttachment,
+                onDownloadAttachment = downloadAttachment,
                 scrollTarget = scrollTarget,
                 highlightId = highlightId,
                 onScrolled = viewModel::onScrolledToTarget,
             )
+        }
+    }
+
+        toast?.let { msg ->
+            Surface(
+                color = MaterialTheme.colorScheme.inverseSurface,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+            ) {
+                Text(
+                    msg,
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                )
+            }
         }
     }
 }
@@ -171,6 +223,8 @@ private fun AuthorBrowseContent(
     state: AuthorBrowseState,
     onSelectAuthor: (String?) -> Unit,
     onOpenImage: (String) -> Unit,
+    onOpenAttachment: (Attachment) -> Unit,
+    onDownloadAttachment: (Attachment) -> Unit,
 ) {
     if (state.loading) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -227,7 +281,13 @@ private fun AuthorBrowseContent(
                 contentPadding = PaddingValues(8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                items(count = visibleMessages.size) { i -> MessageBubble(visibleMessages[i], onOpenImage) }
+                items(count = visibleMessages.size) { i ->
+                    MessageBubble(
+                        visibleMessages[i], onOpenImage,
+                        onOpenAttachment = onOpenAttachment,
+                        onDownloadAttachment = onDownloadAttachment,
+                    )
+                }
             }
         }
     }
@@ -238,6 +298,8 @@ private fun MessageList(
     state: MessagesState,
     onLoadMore: () -> Unit,
     onOpenImage: (String) -> Unit,
+    onOpenAttachment: (Attachment) -> Unit,
+    onDownloadAttachment: (Attachment) -> Unit,
     scrollTarget: String? = null,
     highlightId: String? = null,
     onScrolled: () -> Unit = {},
@@ -279,7 +341,12 @@ private fun MessageList(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         items(state.messages, key = { it.id }) { message ->
-            MessageBubble(message, onOpenImage, highlighted = message.id == highlightId)
+            MessageBubble(
+                message, onOpenImage,
+                highlighted = message.id == highlightId,
+                onOpenAttachment = onOpenAttachment,
+                onDownloadAttachment = onDownloadAttachment,
+            )
         }
         if (state.loadingMore) {
             item {
@@ -297,6 +364,8 @@ private fun InChatSearchResults(
     onSelectAuthor: (String?) -> Unit,
     onOpenMessage: (String) -> Unit,
     onOpenImage: (String) -> Unit,
+    onOpenAttachment: (Attachment) -> Unit,
+    onDownloadAttachment: (Attachment) -> Unit,
 ) {
     if (state.running) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -341,7 +410,12 @@ private fun InChatSearchResults(
         ) {
             items(count = visibleResults.size) { i ->
                 val msg = visibleResults[i]
-                MessageBubble(msg, onOpenImage, onClick = { onOpenMessage(msg.id) })
+                MessageBubble(
+                    msg, onOpenImage,
+                    onClick = { onOpenMessage(msg.id) },
+                    onOpenAttachment = onOpenAttachment,
+                    onDownloadAttachment = onDownloadAttachment,
+                )
             }
         }
     }
@@ -449,12 +523,20 @@ private fun AuthorPickerRow(label: String, selected: Boolean, onClick: () -> Uni
     }
 }
 
+private fun attachmentIcon(att: Attachment) = when (att.type) {
+    AttachmentType.VIDEO, AttachmentType.AUDIO -> AppIcons.PlayArrow
+    AttachmentType.LINK -> AppIcons.Message
+    else -> AppIcons.AttachFile
+}
+
 @Composable
 private fun MessageBubble(
     message: Message,
     onOpenImage: (String) -> Unit,
     highlighted: Boolean = false,
     onClick: (() -> Unit)? = null,
+    onOpenAttachment: (Attachment) -> Unit = {},
+    onDownloadAttachment: (Attachment) -> Unit = {},
 ) {
     val alignment = if (message.isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
     val bubbleColor =
@@ -484,31 +566,72 @@ private fun MessageBubble(
                 }
                 message.attachments.forEach { att ->
                     if (att.isImage) {
-                        NetworkImage(
-                            url = att.url,
-                            contentDescription = att.description,
-                            modifier = Modifier
-                                .padding(top = 6.dp)
-                                .size(200.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { onOpenImage(att.url) },
-                        )
+                        Box(Modifier.padding(top = 6.dp)) {
+                            NetworkImage(
+                                url = att.url,
+                                contentDescription = att.description,
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { onOpenImage(att.url) },
+                            )
+                            // Download the photo straight from the conversation.
+                            Surface(
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                                shape = RoundedCornerShape(bottomStart = 10.dp),
+                                modifier = Modifier.align(Alignment.TopEnd),
+                            ) {
+                                IconButton(
+                                    onClick = { onDownloadAttachment(att) },
+                                    modifier = Modifier.size(32.dp),
+                                ) {
+                                    Icon(
+                                        AppIcons.Download,
+                                        contentDescription = "Скачать",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        }
                     } else {
+                        // Non-photo attachments open in the device's native app
+                        // (video player, music player, browser, document viewer…),
+                        // with a button to download the file instead.
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 4.dp),
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onOpenAttachment(att) }
+                                .padding(vertical = 2.dp),
                         ) {
                             Icon(
-                                AppIcons.AttachFile,
+                                attachmentIcon(att),
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 att.description,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
                             )
+                            IconButton(
+                                onClick = { onDownloadAttachment(att) },
+                                modifier = Modifier.size(28.dp),
+                            ) {
+                                Icon(
+                                    AppIcons.Download,
+                                    contentDescription = "Скачать",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
                         }
                     }
                 }

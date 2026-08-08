@@ -31,16 +31,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import ru.normno.vkarchivereader.data.repository.ArchiveData
 import ru.normno.vkarchivereader.domain.model.AttachmentType
 import ru.normno.vkarchivereader.domain.model.ChatSummary
 import ru.normno.vkarchivereader.domain.model.MediaItem
+import ru.normno.vkarchivereader.download.fileNameFor
+import ru.normno.vkarchivereader.download.rememberMediaDownloader
 import ru.normno.vkarchivereader.presentation.components.AppIcons
 import ru.normno.vkarchivereader.presentation.components.FullscreenMediaViewer
 import ru.normno.vkarchivereader.presentation.components.MediaGrid
@@ -61,6 +65,9 @@ fun MediaGalleryScreen(
     var onlyImages by rememberSaveable { mutableStateOf(true) }
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
     var showChatFilter by remember { mutableStateOf(false) }
+
+    val downloader = rememberMediaDownloader()
+    val scope = rememberCoroutineScope()
 
     // Global gallery only: which chats' media to include (default — all).
     val chatsWithMedia = remember(data) {
@@ -176,6 +183,9 @@ fun MediaGalleryScreen(
             items = media,
             startIndex = idx,
             onClose = { viewerIndex = null },
+            onDownload = { item ->
+                scope.launch { downloader.download(item.url, fileNameFor(item.url, 0, "photo")) }
+            },
         )
     }
 }
