@@ -26,7 +26,7 @@ env:
   # │  ВСТАВЬ СВОЙ ДОМЕН ЗДЕСЬ, например:  CUSTOM_DOMAIN: "vk.example.com"    │
   # │  Оставь пустым ("") — сайт будет на https://<user>.github.io/<repo>/   │
   # └──────────────────────────────────────────────────────────────────────┘
-  CUSTOM_DOMAIN: ""
+  CUSTOM_DOMAIN: "vkviewer.normno.ru"
 
 jobs:
   build:
@@ -57,7 +57,11 @@ jobs:
         if: env.CUSTOM_DOMAIN != ''
         run: echo "${CUSTOM_DOMAIN}" > webApp/build/dist/composeWebCompatibility/productionExecutable/CNAME
 
+      # enablement: turns on GitHub Pages for the repo automatically on the
+      # first run, so no manual Settings -> Pages step is needed.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
